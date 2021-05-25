@@ -15,7 +15,7 @@ public class Protocol<T> {
     /**
      * 操作头
      */
-    private String Header;
+    private String header;
 
     /**
      * 主题
