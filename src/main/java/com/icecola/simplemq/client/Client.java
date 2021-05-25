@@ -1,9 +1,10 @@
 package com.icecola.simplemq.client;
 
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.icecola.simplemq.bean.OperateEnum;
 import com.icecola.simplemq.bean.Protocol;
+import com.icecola.simplemq.client.handle.ClientProtocolHandler;
+import com.icecola.simplemq.client.handle.ProtocolDecoder;
 import com.icecola.simplemq.queue.Message;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -13,6 +14,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 
+import java.sql.Time;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +43,9 @@ public class Client {
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
                                 .addLast(new StringDecoder())
-                                .addLast(new StringEncoder());
+                                .addLast(new StringEncoder())
+                                .addLast(new ProtocolDecoder())
+                                .addLast(new ClientProtocolHandler());
                     }
                 });
         try {
@@ -98,13 +102,27 @@ public class Client {
 //                    break;
 //                }
 //            }
-            Protocol<Message> protocol = new Protocol<>();
-            Message message = new Message("123123");
-            protocol.setHeader(OperateEnum.CAT.getValue());
-            protocol.setTopic("topic");
-            protocol.setData(message);
-            channel.writeAndFlush(JSONUtil.toJsonStr(protocol));
+
+            String s = null;
+            Scanner sc = new Scanner(System.in);
+            System.out.println("是否继续：Y|N");
+            while ((s = sc.nextLine()).equals("Y") && channel.isWritable()) {
+                Protocol<Message> protocol = new Protocol<>();
+                System.out.println("\n操作：cat | enqueue | dequeue");
+                OperateEnum anEnum = OperateEnum.getEnum(sc.nextLine());
+                protocol.setHeader(anEnum.getValue());
+                System.out.println("消息topic：");
+                protocol.setTopic(sc.nextLine());
+                System.out.println("消息内容：");
+                Message message = new Message(sc.nextLine());
+                protocol.setData(message);
+
+                channel.writeAndFlush(JSONUtil.toJsonStr(protocol));
+                System.out.println("是否继续：Y|N");
+            }
             System.out.println("退出");
+
+
         }).start();
         new Thread(() -> {
             Client client = new Client();

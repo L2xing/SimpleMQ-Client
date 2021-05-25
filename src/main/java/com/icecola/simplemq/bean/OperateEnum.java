@@ -37,7 +37,7 @@ public enum OperateEnum {
     @Getter
     private final String value;
 
-    public OperateEnum getEnum(String str) {
+    public static OperateEnum getEnum(String str) {
         if (StrUtil.isNotEmpty(str)) {
             for (OperateEnum operateEnum : OperateEnum.values()) {
                 if (StrUtil.equals(operateEnum.value, str)) {
