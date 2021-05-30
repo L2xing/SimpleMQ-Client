@@ -55,19 +55,22 @@ public class SimpleConsumerImpl implements IConsumer, INetListener {
 
     @Override
     public void successChannel(Channel channel) {
-        while (channel.isWritable()) {
-            log.info("监听者topic:{} 可连接状态", topic);
-            // 发送拉取消息信息
+        new Thread(()->{
+            while (channel.isWritable()) {
+                log.info("监听者topic:{} 可连接状态", topic);
+                // 发送拉取消息信息
 //            if (pullAble) {
-            channel.writeAndFlush(getPullProtocol());
+                channel.writeAndFlush(getPullProtocol());
 //                pullAble = false;
 //            }
-            try {
-                TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+        }).start();
+
     }
 
 

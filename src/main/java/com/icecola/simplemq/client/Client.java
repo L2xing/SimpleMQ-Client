@@ -9,6 +9,7 @@ import com.icecola.simplemq.bean.OperateEnum;
 import com.icecola.simplemq.bean.Protocol;
 import com.icecola.simplemq.client.handle.ClientProtocolHandler;
 import com.icecola.simplemq.client.handle.ProtocolDecoder;
+import com.icecola.simplemq.client.handle.ProtocolEncoder;
 import com.icecola.simplemq.queue.Message;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -46,8 +47,9 @@ public class Client {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
-                                .addLast(new StringDecoder())
                                 .addLast(new StringEncoder())
+                                .addLast(new ProtocolEncoder())
+                                .addLast(new StringDecoder())
                                 .addLast(new ProtocolDecoder())
                                 .addLast(new ClientProtocolHandler(consumer));
                     }
@@ -89,9 +91,11 @@ public class Client {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
-                                .addLast(new StringDecoder())
                                 .addLast(new StringEncoder())
-                                .addLast(new ProtocolDecoder());
+                                .addLast(new ProtocolEncoder())
+                                .addLast(new StringDecoder())
+                                .addLast(new ProtocolDecoder())
+                                .addLast(new ClientProtocolHandler(null));
                     }
                 });
         try {
