@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.icecola.simplemq.api.IConsumer;
 import com.icecola.simplemq.api.INetListener;
+import com.icecola.simplemq.bean.ClientTypeEnum;
 import com.icecola.simplemq.bean.OperateEnum;
 import com.icecola.simplemq.bean.Protocol;
 import com.icecola.simplemq.client.Client;
@@ -22,11 +23,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2021/5/25 20:30
  */
 @Slf4j
-public class SimpleConsumerImpl implements IConsumer, INetListener {
-
-    private Client client;
-
-    private Channel channel;
+public abstract class SimpleConsumerImpl implements IConsumer, INetListener {
 
     private String topic;
 
@@ -40,22 +37,16 @@ public class SimpleConsumerImpl implements IConsumer, INetListener {
     public SimpleConsumerImpl(String topic) {
         log.info("【消费者 正在启动】：topic为:{}", topic);
         this.topic = topic;
-        client = new Client((INetListener) this);
-
+        new Client(ClientTypeEnum.Consumer, this);
     }
 
 
     @Override
-    public void onMessages(List<Message> messages) {
-        for (Message message : messages) {
-            log.info("【onMessages获取到数据：message:{}】", message);
-            pullAble = true;
-        }
-    }
+    public abstract void onMessages(List<Message> messages);
 
     @Override
     public void successChannel(Channel channel) {
-        new Thread(()->{
+        new Thread(() -> {
             while (channel.isWritable()) {
                 log.info("监听者topic:{} 可连接状态", topic);
                 // 发送拉取消息信息
@@ -86,6 +77,15 @@ public class SimpleConsumerImpl implements IConsumer, INetListener {
     }
 
     public static void main(String[] args) {
-        SimpleConsumerImpl simpleConsumer = new SimpleConsumerImpl("111");
+        SimpleConsumerImpl simpleConsumer = new SimpleConsumerImpl("111") {
+
+            @Override
+            public void onMessages(List<Message> messages) {
+                log.info("【Listener 监听到消息】");
+                for (Message message : messages) {
+                    log.info("message: {}", message);
+                }
+            }
+        };
     }
 }

@@ -5,6 +5,7 @@ import com.icecola.simplemq.api.IConsumer;
 import com.icecola.simplemq.api.INetListener;
 import com.icecola.simplemq.api.IProvider;
 import com.icecola.simplemq.api.provider.SimpleProviderImpl;
+import com.icecola.simplemq.bean.ClientTypeEnum;
 import com.icecola.simplemq.bean.OperateEnum;
 import com.icecola.simplemq.bean.Protocol;
 import com.icecola.simplemq.client.handle.ClientProtocolHandler;
@@ -37,13 +38,12 @@ public class Client {
 
     private Channel channel;
 
-    public Client(IConsumer consumer) {
+    public Client(ClientTypeEnum typeEnum, INetListener netListener) {
         Bootstrap client = new Bootstrap();
         EventLoopGroup worker = new NioEventLoopGroup();
         client.group(worker)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
-
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
@@ -51,7 +51,7 @@ public class Client {
                                 .addLast(new ProtocolEncoder())
                                 .addLast(new StringDecoder())
                                 .addLast(new ProtocolDecoder())
-                                .addLast(new ClientProtocolHandler(consumer));
+                                .addLast(new ClientProtocolHandler(typeEnum, netListener));
                     }
                 });
         try {
@@ -59,7 +59,7 @@ public class Client {
             sync.addListener((ChannelFutureListener) future -> {
                 if (sync.isSuccess()) {
                     System.out.println("【Netty 客户端连接】：连接成功！！");
-                    channel = sync.channel();
+                    this.channel = sync.channel();
                 } else {
                     sync.channel().close();
                     if (channel != null) {
@@ -67,52 +67,6 @@ public class Client {
                     }
                 }
             });
-
-            // 关闭
-            sync.channel().closeFuture().sync();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                worker.shutdownGracefully().sync();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public Client(INetListener netListener) {
-        Bootstrap client = new Bootstrap();
-        EventLoopGroup worker = new NioEventLoopGroup();
-        client.group(worker)
-                .channel(NioSocketChannel.class)
-                .handler(new ChannelInitializer<SocketChannel>() {
-
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline()
-                                .addLast(new StringEncoder())
-                                .addLast(new ProtocolEncoder())
-                                .addLast(new StringDecoder())
-                                .addLast(new ProtocolDecoder())
-                                .addLast(new ClientProtocolHandler(null));
-                    }
-                });
-        try {
-            ChannelFuture sync = client.connect(addr, port).sync();
-            sync.addListener((ChannelFutureListener) future -> {
-                if (sync.isSuccess()) {
-                    System.out.println("【Netty 客户端连接】：连接成功！！");
-                    channel = sync.channel();
-                    netListener.successChannel(channel);
-                } else {
-                    sync.channel().close();
-                    if (channel != null) {
-                        client.clone();
-                    }
-                }
-            });
-
             // 关闭
             sync.channel().closeFuture().sync();
         } catch (InterruptedException e) {
@@ -140,29 +94,29 @@ public class Client {
 
 
     public static void main(String[] args) throws InterruptedException {
-        Client client = new Client(new SimpleProviderImpl() {
-            @Override
-            public void successChannel(Channel channel) {
-                String s = "";
-                Scanner sc = new Scanner(System.in);
-                System.out.println("是否继续：Y|N");
-                while ((s = sc.nextLine()).equals("Y") && channel.isWritable()) {
-                    Protocol<Message> protocol = new Protocol<>();
-                    System.out.println("\n操作：cat | enqueue | dequeue");
-                    OperateEnum anEnum = OperateEnum.getEnum(sc.nextLine());
-                    protocol.setHeader(anEnum.getValue());
-                    System.out.println("消息topic：");
-                    protocol.setTopic(sc.nextLine());
-                    System.out.println("消息内容：");
-                    Message message = new Message(sc.nextLine());
-                    protocol.setData(message);
-
-                    channel.writeAndFlush(JSONUtil.toJsonStr(protocol));
-                    System.out.println("是否继续：Y|N");
-                }
-                System.out.println("退出");
-            }
-        });
+//        Client client = new Client(new SimpleProviderImpl() {
+//            @Override
+//            public void successChannel(Channel channel) {
+//                String s = "";
+//                Scanner sc = new Scanner(System.in);
+//                System.out.println("是否继续：Y|N");
+//                while ((s = sc.nextLine()).equals("Y") && channel.isWritable()) {
+//                    Protocol<Message> protocol = new Protocol<>();
+//                    System.out.println("\n操作：cat | enqueue | dequeue");
+//                    OperateEnum anEnum = OperateEnum.getEnum(sc.nextLine());
+//                    protocol.setHeader(anEnum.getValue());
+//                    System.out.println("消息topic：");
+//                    protocol.setTopic(sc.nextLine());
+//                    System.out.println("消息内容：");
+//                    Message message = new Message(sc.nextLine());
+//                    protocol.setData(message);
+//
+//                    channel.writeAndFlush(JSONUtil.toJsonStr(protocol));
+//                    System.out.println("是否继续：Y|N");
+//                }
+//                System.out.println("退出");
+//            }
+//        });
 //        new Thread(() -> {
 //            while (client == null || client.getChannel() == null) {
 //                try {

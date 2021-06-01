@@ -1,5 +1,6 @@
 package com.icecola.simplemq.api;
 
+import com.icecola.simplemq.bean.Protocol;
 import com.icecola.simplemq.queue.Message;
 
 
@@ -12,6 +13,8 @@ import com.icecola.simplemq.queue.Message;
  */
 public interface IProvider {
 
-    void send(Message message);
+    Protocol<Message> send(Message message);
+
+    void syncResponse( Protocol<Message> messageProtocol);
 
 }

@@ -3,8 +3,12 @@ package com.icecola.simplemq.client.handle;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.icecola.simplemq.api.IConsumer;
+import com.icecola.simplemq.api.INetListener;
+import com.icecola.simplemq.api.IProvider;
+import com.icecola.simplemq.bean.ClientTypeEnum;
 import com.icecola.simplemq.bean.Protocol;
 import com.icecola.simplemq.queue.Message;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -18,52 +22,49 @@ import java.util.Arrays;
  * @date 2021/5/23 11:10
  */
 @Slf4j
-public class ClientProtocolHandler extends SimpleChannelInboundHandler<String> {
+public class ClientProtocolHandler extends SimpleChannelInboundHandler<Protocol> {
 
-    private IConsumer consumer;
+    private ClientTypeEnum clientTypeEnum;
 
-    public ClientProtocolHandler(IConsumer consumer) {
-        this.consumer = consumer;
-    }
+    private INetListener iNetListener;
 
-    private Protocol<Message> parseMsg(String msg) {
-        try {
-            Protocol protocol = JSONUtil.toBean(msg, Protocol.class);
-            if (protocol.getData() instanceof JSONObject) {
-                Message message = JSONUtil.toBean((JSONObject) protocol.getData(), Message.class);
-                protocol.setData(message);
-            }
-            return protocol;
-        } catch (
-                Exception e) {
-            log.info("【自定义协议转化器异常】：", e);
-            // 应该终止了
-        }
-        return null;
+    private Channel channel;
+
+    public ClientProtocolHandler(ClientTypeEnum typeEnum, INetListener iNetListener) {
+        this.clientTypeEnum = typeEnum;
+        this.iNetListener = iNetListener;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-        Protocol<Message> messageProtocol = parseMsg(msg);
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        this.channel = ctx.channel();
+        iNetListener.successChannel(this.channel);
+        System.out.println("channelActive:" + this.channel);
+        ctx.fireChannelActive();
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Protocol msg) throws Exception {
         log.info("【netty-client获取数据成功】：{}", msg);
         // todo 这里需要处理分情况了
 
         // 短期内先简单处理
-        Object data = messageProtocol.getData();
+        Object data = msg.getData();
         if (data instanceof Integer) {
             // CAT 请求
-            log.info("【处理分发】 CAT处理：{}", messageProtocol.getData());
+            log.info("【处理分发】 CAT处理：{}", msg.getData());
 
         } else if (data instanceof Message) {
             // DEQUEUE 请求
-            log.info("【处理分发】 DEQUEUE处理：{}", messageProtocol.getData());
+            log.info("【处理分发】 DEQUEUE处理：{}", msg.getData());
             Message message = (Message) data;
-            consumer.onMessages(Arrays.asList(message));
+            ((IConsumer) this.iNetListener).onMessages(Arrays.asList(message));
+        } else if (data instanceof String) {
+            log.info("【处理分发】 DEQUEUE处理：{}", msg.getData());
+            ((IProvider) this.iNetListener).syncResponse(msg);
         } else {
             log.info("【处理分发】 其他处理：{}", msg);
         }
-
-
     }
 
 }
